@@ -28,13 +28,6 @@ streamlit run app.py
 
 Buka `http://localhost:8501` di browser.
 
-## Deploy ke Streamlit Community Cloud (gratis)
-
-1. Push folder ini (`app.py`, `transformers.py`, `artifacts.pkl`, `requirements.txt`) ke repo GitHub baru.
-   File `.csv` dataset **tidak perlu** diikutkan — `artifacts.pkl` sudah memuat model yang jadi.
-2. Buka [share.streamlit.io](https://share.streamlit.io) → **New app** → pilih repo tadi.
-3. Isi *Main file path* dengan `app.py`, lalu **Deploy**.
-4. Tunggu build selesai (1-3 menit) — app langsung online dengan URL publik.
 
 ## Regenerasi Model (opsional)
 
@@ -52,12 +45,11 @@ python build_artifacts.py   # akan menghasilkan artifacts.pkl baru
 ```
 
 Versi library yang dipakai saat membuat `artifacts.pkl` ini: scikit-learn 1.8.0,
-pandas 3.0.2, numpy 2.4.4, joblib 1.5.3. Kalau environment deploy kamu beda jauh
-dari versi ini, regenerasi di atas akan menyamakannya.
+pandas 3.0.2, numpy 2.4.4, joblib 1.5.3. 
 
 ## Catatan
 
 `Renewables (% equivalent primary energy)` dan beberapa kolom lain tidak dipakai —
-notebook ini memilih 5 fitur final (lihat bagian "Feature Engineering" di notebook).
+notebook ini memilih 5 fitur final.
 DBSCAN tidak dipakai sebagai model prediksi (dipakai hanya untuk deteksi anomali),
 jadi halaman "Prediksi Negara Baru" murni memakai KMeans.
