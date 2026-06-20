@@ -1,0 +1,25 @@
+# Dataset mentah - jangan di-push, ukurannya besar & tidak perlu untuk deployment
+# (artifacts.pkl sudah memuat model yang jadi, app.py tidak butuh CSV ini lagi)
+*.csv
+global-data-on-sustainable-energy.zip
+
+# Python cache & bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit local config/secrets (kalau ada secrets.toml jangan ikut di-push)
+.streamlit/secrets.toml
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
