@@ -1,63 +1,108 @@
-# EcoPulse — Dashboard Klasifikasi Keberlanjutan Energi Negara
+# 🌍 EcoPulse — Klasifikasi Keberlanjutan Energi Negara
 
-Web app Streamlit untuk men-deploy hasil clustering K-Means dari notebook
-`DBSCAN_revisi_ML_final.ipynb` (176 negara, 5 indikator energi, k=2).
+Aplikasi web (Streamlit) untuk mengelompokkan 176 negara berdasarkan indikator
+keberlanjutan energi, menggunakan model **K-Means** yang dilatih di
+`DBSCAN_revisi_ML_final.ipynb`. Proyek ML — BINUS Semester 4.
 
-## Isi folder
+## Ringkasan
 
-| File | Keterangan |
+Setiap negara dikelompokkan ke salah satu dari 2 cluster berdasarkan 5 indikator
+energi (rata-rata 3 tahun terakhir per negara). Tujuannya membedakan negara
+dengan **akses & konsumsi energi modern yang tinggi** dari negara dengan
+**akses terbatas, konsumsi rendah yang sebagian besar masih berbasis biomassa
+tradisional** — bukan transisi energi bersih yang sesungguhnya.
+
+| | |
 |---|---|
-| `app.py` | Aplikasi Streamlit utama (4 halaman, lihat di bawah) |
-| `transformers.py` | Fungsi `clip_transform` & `log_transform` — **wajib ada**, dipakai pipeline preprocessing |
-| `artifacts.pkl` | Model & metadata yang sudah dilatih (KMeans, pipeline, profil cluster, dll) — siap pakai |
-| `build_artifacts.py` | Script untuk regenerasi `artifacts.pkl` dari ulang (lihat bagian "Regenerasi Model") |
-| `requirements.txt` | Daftar dependency Python |
+| **Dataset** | [Global Data on Sustainable Energy](https://www.kaggle.com/datasets/anshtanwar/global-data-on-sustainable-energy) (Kaggle), 176 negara, 2000–2020 |
+| **Fitur** | 5 indikator (lihat tabel di bawah) |
+| **Model final** | K-Means, k=2 (dipilih dari pencarian k=2–10 berdasarkan Silhouette Score tertinggi) |
+| **Pembanding** | Hierarchical Clustering (Ward linkage), DBSCAN (deteksi anomali) |
 
-Empat halaman di `app.py`:
-1. **Ringkasan Proyek** — overview dataset, metrik model, profil 2 cluster
-2. **Prediksi Negara Baru** — input 5 indikator lewat slider, langsung dapat cluster + perbandingan
-3. **Eksplorasi Cluster** — profil rata-rata per cluster, peta t-SNE interaktif, daftar negara per cluster
-4. **Perbandingan Model** — tabel KMeans vs Hierarchical vs DBSCAN beserta alasan pemilihan model final
+## Struktur Proyek
 
-## Menjalankan di lokal
+```
+ECOPLUS/
+├── app.py                          # Aplikasi Streamlit (3 halaman, lihat di bawah)
+├── requirements.txt
+├── model/
+│   ├── kmeans_model.pkl            # Model K-Means terlatih (k=2)
+│   ├── clip_bounds.pkl             # Batas IQR clipping per fitur (dict: kolom -> (lower, upper))
+│   ├── log_transformed_features.pkl# Daftar fitur yang di-log1p (skewness tinggi)
+│   ├── features.pkl                # Urutan 5 nama kolom fitur final
+│   ├── cluster_profiles.pkl        # DataFrame per negara: Entity, cluster_kmeans, nilai fitur (clipped)
+│   ├── cluster_names.pkl           # Nama deskriptif tiap cluster {0: "...", 1: "..."}
+│   ├── X_log.pkl                   # Data ter-clip+log (dipakai utk fit ulang RobustScaler saat app start)
+│   ├── noise_countries.pkl         # Negara yang dianggap anomali oleh DBSCAN
+│   └── preprocessing_pipeline.pkl  # (lihat catatan di bawah — saat ini tidak dipakai app.py)
+```
+
+App **tidak** memuat `preprocessing_pipeline.pkl` langsung. `app.py` membangun
+ulang pipeline (`clip → log1p → RobustScaler`) di fungsi `_build_pipeline()` dari
+`clip_bounds.pkl` + `log_transformed_features.pkl` + `X_log.pkl`, lalu fit
+ulang scaler-nya saat startup. Ini sengaja, supaya tidak tergantung pickle
+`Pipeline`/`FunctionTransformer` yang rawan gagal saat versi scikit-learn di
+Colab (tempat training) beda dengan versi di environment deploy.
+
+Tiga halaman di `app.py`:
+1. **Prediksi Negara Baru** — input 5 indikator, dapat cluster + jarak ke centroid + radar chart
+2. **Eksplorasi Cluster** — profil tiap cluster, peta t-SNE interaktif, daftar negara per cluster
+3. **Tentang Model** — metodologi, dataset, dan tabel perbandingan algoritma
+
+## Metodologi Singkat
+
+| Tahap | Detail |
+|---|---|
+| Agregasi | Rata-rata 3 tahun data terakhir per negara |
+| Missing value | Median imputation per fitur |
+| Outlier | IQR clipping (winsorizing) |
+| Transformasi | log1p untuk fitur dengan skewness > 1.0 |
+| Scaling | RobustScaler |
+| Pemilihan k | Silhouette Score, scan k=2–10 |
+
+## Hasil
+
+| Model | Silhouette ↑ | DBI ↓ | CHI ↑ | Noise |
+|---|---|---|---|---|
+| **K-Means (final)** | **0.4657** | **0.9353** | **133.92** | 0% |
+| Hierarchical (Ward) | 0.4432 | 0.9821 | 118.45 | 0% |
+| DBSCAN* | 0.5417 | 0.5886 | 26.74 | 92.6% |
+
+\*DBSCAN dievaluasi hanya pada titik non-noise — tidak dipakai sebagai model
+prediksi karena >90% negara dianggap noise, hanya untuk deteksi anomali.
+
+**Cluster 0** — akses listrik & konsumsi energi tinggi, efisiensi lebih baik.
+**Cluster 1** — akses & konsumsi energi rendah, energi terbarukan didominasi
+biomassa tradisional (bukan solar/wind).
+
+## Cara Menjalankan
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Buka `http://localhost:8501` di browser.
+Buka `http://localhost:8501`. Folder `model/` harus ada di direktori yang sama
+dengan `app.py` (path di kode memakai `./model/...`).
 
-## Deploy ke Streamlit Community Cloud (gratis)
+## Deploy ke Streamlit Community Cloud
 
-1. Push folder ini (`app.py`, `transformers.py`, `artifacts.pkl`, `requirements.txt`) ke repo GitHub baru.
-   File `.csv` dataset **tidak perlu** diikutkan — `artifacts.pkl` sudah memuat model yang jadi.
-2. Buka [share.streamlit.io](https://share.streamlit.io) → **New app** → pilih repo tadi.
-3. Isi *Main file path* dengan `app.py`, lalu **Deploy**.
-4. Tunggu build selesai (1-3 menit) — app langsung online dengan URL publik.
+1. Push `app.py`, `requirements.txt`, dan folder `model/` ke repo GitHub.
+2. Buka [share.streamlit.io](https://share.streamlit.io) → **New app** → pilih repo, isi main file `app.py` → **Deploy**.
 
-## Regenerasi Model (opsional)
+## Catatan Maintenance
 
-`artifacts.pkl` yang disertakan sudah diverifikasi cocok 100% dengan output notebook
-(Silhouette KMeans 0.4657, DBI 0.9353, CHI 133.9227 — sama persis dengan hasil di
-`DBSCAN_revisi_ML_final.ipynb`). Biasanya **tidak perlu** diregenerasi.
+`PROFILE_AVG` dan deskripsi naratif tiap cluster di `CLUSTER_CONFIG` saat ini
+**di-hardcode di `app.py`**, tidak dihitung otomatis dari `cluster_profiles.pkl`.
+Kalau model di-retrain (fitur berubah, k berubah, dataset di-update), dua hal
+itu **tidak ikut berubah otomatis** — perlu diperbarui manual supaya tidak
+menampilkan profil yang sudah tidak sesuai dengan model terbaru.
 
-Regenerasi hanya disarankan kalau muncul error versi scikit-learn saat `joblib.load`
-(pesan seperti *"incompatible version"*) di environment deploy kamu. Caranya:
+Kalau muncul `InconsistentVersionWarning` dari scikit-learn saat `joblib.load`,
+itu tanda versi scikit-learn saat training (Colab) beda dengan versi lokal —
+biasanya cuma warning, tapi kalau sampai error, samakan versi scikit-learn
+di `requirements.txt` dengan yang dipakai saat training di notebook.
 
-```bash
-kaggle datasets download -d anshtanwar/global-data-on-sustainable-energy
-unzip global-data-on-sustainable-energy.zip
-python build_artifacts.py   # akan menghasilkan artifacts.pkl baru
-```
+## Sumber Data
 
-Versi library yang dipakai saat membuat `artifacts.pkl` ini: scikit-learn 1.8.0,
-pandas 3.0.2, numpy 2.4.4, joblib 1.5.3. Kalau environment deploy kamu beda jauh
-dari versi ini, regenerasi di atas akan menyamakannya.
-
-## Catatan
-
-`Renewables (% equivalent primary energy)` dan beberapa kolom lain tidak dipakai —
-notebook ini memilih 5 fitur final (lihat bagian "Feature Engineering" di notebook).
-DBSCAN tidak dipakai sebagai model prediksi (dipakai hanya untuk deteksi anomali),
-jadi halaman "Prediksi Negara Baru" murni memakai KMeans.
+Ansh Tanwar, [Global Data on Sustainable Energy](https://www.kaggle.com/datasets/anshtanwar/global-data-on-sustainable-energy), Kaggle.
