@@ -85,23 +85,6 @@ streamlit run app.py
 Buka `http://localhost:8501`. Folder `model/` harus ada di direktori yang sama
 dengan `app.py` (path di kode memakai `./model/...`).
 
-## Deploy ke Streamlit Community Cloud
-
-1. Push `app.py`, `requirements.txt`, dan folder `model/` ke repo GitHub.
-2. Buka [share.streamlit.io](https://share.streamlit.io) → **New app** → pilih repo, isi main file `app.py` → **Deploy**.
-
-## Catatan Maintenance
-
-`PROFILE_AVG` dan deskripsi naratif tiap cluster di `CLUSTER_CONFIG` saat ini
-**di-hardcode di `app.py`**, tidak dihitung otomatis dari `cluster_profiles.pkl`.
-Kalau model di-retrain (fitur berubah, k berubah, dataset di-update), dua hal
-itu **tidak ikut berubah otomatis** — perlu diperbarui manual supaya tidak
-menampilkan profil yang sudah tidak sesuai dengan model terbaru.
-
-Kalau muncul `InconsistentVersionWarning` dari scikit-learn saat `joblib.load`,
-itu tanda versi scikit-learn saat training (Colab) beda dengan versi lokal —
-biasanya cuma warning, tapi kalau sampai error, samakan versi scikit-learn
-di `requirements.txt` dengan yang dipakai saat training di notebook.
 
 ## Sumber Data
 
